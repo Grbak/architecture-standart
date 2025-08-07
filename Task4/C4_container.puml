@@ -1,0 +1,62 @@
+@startuml
+
+title Диаграмма контейнеров банка "Стандарт"
+
+left to right direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(customer, "Клиент", "Клиент компании")
+Person(backOfficeManager, "Менеджер бэк-офиса", "Сотрудник компании")
+Person(frontOfficeManager, "Менеджер фронт-офиса", "Сотрудник компании")
+Person(callCenterManager, "Менеджер кол-центра", "Сотрудник компании или партнерского кол-центра")
+
+System(abs, "АБС")
+System(onlineBank, "Интернет-банк")
+System(website, "Сайт", "Интерфейс, предоставляющий клиентам первичное офлайн-обслуживание")
+System_Ext(smsGateway, "СМС-шлюз телеком-оператора", "Система, предназначенная для отправки СМС-сообщений")
+System(s3storage, "S3-хранилище", "Внешнее хранилище, используемое для хранения файлов")
+System_Ext(callCenterSystem, "Система кол-центра", "Система, предназначенная для обработки входящих звонков от клиентов")
+
+Container_Boundary(abs, "АБС") {
+  Container(absFrontend, "Интерфейс АБС", "Delphi", "Десктопное приложение, предоставляющее интерфейс для работы с АБС")
+  Container(absDb, "База данных АБС", "Oracle")
+  Container(absApi, "API АБС", "Spring Boot")
+  Container(depositsMicroservice, "Микросервис депозитов", "Spring Boot")
+  Container(depositsDb, "База данных микросервиса депозитов", "PostgreSQL")
+  Container(notificationsMicroservice, "Микросервис уведомлений", "Spring Boot")
+  Container(notificationsDb, "База данных микросервиса уведомлений", "PostgreSQL")
+  Container(messageQueue, "Очередь сообщений", "Kafka")
+  Container(notificationsMessageQueue, "Очередь сообщений", "Kafka")
+}
+
+Container_Boundary(onlineBank, "Интернет-банк") {
+  Container(onlineBankApp, "Интернет-банк", "ASP.NET MVC 45", "Клиент-серверная система, предоставляющая онлайн-обслуживание ")
+  Container(onlineBankDb, "База данных интернет-банка", "MS SQL")
+}
+
+Rel(frontOfficeManager,absFrontend,"Взаимодействует при предоставлении офлайн-обслуживания")
+Rel(backOfficeManager,absFrontend, "Взаимодействует при предоставлении онлайн-обслуживания")
+Rel(customer,onlineBankApp,"Получает онлайн-обслуживание")
+Rel(onlineBankApp,absApi, "Обращается напрямую при необходимости синхронного взаимодействия")
+Rel(customer,website, "Получает первичное офлайн-обслуживание")
+Rel(website,absApi, "Обращается напрямую при необходимости синхронного взаимодействия")
+Rel(absFrontend, absApi, "Взаимодействует при предоставлении онлайн- и офлайн-обслуживания")
+Rel(absFrontend, depositsMicroservice, "Взаимодействует при предоставлении онлайн- и офлайн-обслуживания")
+Rel(absApi, absDb, "Читает и пишет данные")
+Rel(absApi,notificationsMessageQueue, "Пишет сообщения")
+Rel(depositsMicroservice,depositsDb, "Читает и пишет данные")
+Rel(depositsMicroservice,notificationsMessageQueue, "Пишет сообщения")
+Rel(notificationsMicroservice,notificationsDb, "Читает и пишет данные")
+Rel(notificationsMicroservice,smsGateway, "Отправляет СМС-уведомления")
+Rel(notificationsMicroservice,notificationsMessageQueue, "Читает сообщения")
+Rel(onlineBankApp,onlineBankDb, "Пишет и читает данные")
+Rel(onlineBankApp,messageQueue,"Пишет сообщения в случаях, когда возможно асинхронное взаимодействие")
+Rel(website,messageQueue,"Пишет сообщения в случаях, когда возможно асинхронное взаимодействие")
+Rel(absApi,messageQueue,"Читает сообщения")
+Rel(depositsMicroservice,s3storage,"Добавляет файлы с актуальными ставками")
+Rel(callCenterSystem,s3storage,"Читает файлы с актуальными ставками")
+Rel(callCenterManager,callCenterSystem,"Обрабатывает звонки клиентов")
+
+
+@enduml
